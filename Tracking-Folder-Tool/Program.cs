@@ -1,9 +1,12 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Radzen;
 using Tracking_Folder_Tool.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Add Radzen components
+builder.Services.AddRadzenComponents();
 // Add services to the container.
 builder.Services.AddSignalR();
 builder.Services.AddSingleton<FolderWatcherService>(); // <-- Add this line

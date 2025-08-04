@@ -1,4 +1,6 @@
-﻿@using Microsoft.AspNetCore.SignalR.Client
+﻿@page "/"
+@page "/tracking-folder"
+@using Microsoft.AspNetCore.SignalR.Client
 @using System.Text.Json
 @using Tracking_Folder_Tool.Commons
 @using static Tracking_Folder_Tool.Commons.Common
@@ -8,9 +10,15 @@
 @implements IAsyncDisposable
 @inject NavigationManager Navigation
 
-<RadzenStack Style="width: 100%" AlignItems="AlignItems.Start" JustifyContent="JustifyContent.Center">
+<PageTitle>Tracking-Folder-Tool</PageTitle>
+
+<RadzenStack Gap="10px" Style="width: 100%; padding-bottom: 10px;" AlignItems="AlignItems.Start" JustifyContent="JustifyContent.Center">
     <RadzenStack>
-        <RadzenLabel Style="font-size: 20px; font-weight: 600" Text="Tracking folder"></RadzenLabel>
+        <RadzenLabel Style="font-size: 24px; font-weight: 600">Tracking folder</RadzenLabel>
+    </RadzenStack>
+    <RadzenStack>
+        <RadzenLabel Text="@($"Current folder")" Style="font-size: 18px; font-weight: 500"></RadzenLabel>
+        <RadzenLabel Text="@(Common.TargetPath)" Style="font-size: 16px; color: darkgreen; font-weight: 500"></RadzenLabel>
     </RadzenStack>
     <RadzenStack Visible=@(FileLists.Any())>
         <RadzenButton Text="Clear" Click="ResetFileLists" Style="width: contain" Size=ButtonSize.Small ButtonStyle=ButtonStyle.Primary Variant=Variant.Flat></RadzenButton>

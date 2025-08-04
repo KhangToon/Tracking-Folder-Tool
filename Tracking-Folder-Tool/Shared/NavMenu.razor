@@ -1,39 +1,56 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="">Tracking-Folder-Tool</a>
-        <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-    </div>
-</div>
+﻿﻿@using Radzen.Blazor;
+@using Radzen;
 
-<div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
-    <nav class="flex-column">
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="oi oi-home" aria-hidden="true"></span> Home
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="counter">
-                <span class="oi oi-plus" aria-hidden="true"></span> Counter
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="fetchdata">
-                <span class="oi oi-list-rich" aria-hidden="true"></span> Fetch data
-            </NavLink>
-        </div>
-    </nav>
-</div>
+@inject TooltipService TooltipService
 
-@code {
-    private bool collapseNavMenu = true;
+<style>
+    .mycolor-press {
+        color: rgba(28, 49, 90);
+    }
 
-    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+    .mycolor-default {
+        color: white;
+    }
+</style>
 
-    private void ToggleNavMenu()
+<RadzenSidebar Visible="@visibleSideBar" Responsive="true" Style="width: max-content; height: 100%">
+    <RadzenPanelMenu DisplayStyle="@(sidebarExpanded? MenuItemDisplayStyle.IconAndText: MenuItemDisplayStyle.Icon)" ShowArrow="true" Style="width: fit-content; height: 100%;">
+        <RadzenStack Gap="0" Orientation="Orientation.Vertical" Style="height: 100%; padding-top: 50px" JustifyContent="JustifyContent.Start">
+            <RadzenStack Visible=false Style="padding-bottom: 20px">
+                @* <RadzenImage Visible="@(sidebarExpanded)" Path="properties/image/Logo_avs.png" Style="width: 200px; height: 150px" AlternateText="community" /> *@
+            </RadzenStack>
+            <RadzenPanelMenuItem MouseEnter="@(args => ShowToolTip(args, TooltipPosition.Bottom, "Home"))" Style="padding-bottom: 5px; color: white" IconColor="color: white" Text="Home" Path="/tracking-folder" Icon="home"></RadzenPanelMenuItem>
+        </RadzenStack>
+    </RadzenPanelMenu>
+</RadzenSidebar>
+
+@code
+{
+    [Parameter]
+    public bool sidebarExpanded { get; set; }
+
+    [Parameter]
+    public bool visibleSideBar { get; set; }
+
+    private string stylecolor = "mycolor-press";
+
+    private void MenuItemClick(MenuItemEventArgs eventArgs)
     {
-        collapseNavMenu = !collapseNavMenu;
+        if (stylecolor == "mycolor-default")
+        {
+            stylecolor = "mycolor-press";
+        }
+        else
+            stylecolor = "mycolor-default";
+    }
+    // Tooltip
+    void ShowToolTip(ElementReference elementReference, TooltipPosition position, string content)
+    {
+        if (!sidebarExpanded)
+        {
+            TooltipOptions options = new TooltipOptions() { Position = position, Delay = 50, Style = "background-color: black" };
+
+            TooltipService.Open(elementReference, content, options);
+        }
     }
 }

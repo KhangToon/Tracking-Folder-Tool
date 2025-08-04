@@ -4,6 +4,7 @@ using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Tracking_Folder_Tool.Data;
+using Tracking_Folder_Tool.Commons;
 
 public class FolderWatcherService : IDisposable
 {
@@ -19,7 +20,7 @@ public class FolderWatcherService : IDisposable
 
     private void StartWatching()
     {
-        string path = @"D:\KHANG DATA\PROJECT\TRACKING FOLDER\FolderToTracking";
+        string path = Common.TargetPath;
 
         // Verify directory exists
         if (!Directory.Exists(path))
@@ -30,10 +31,40 @@ public class FolderWatcherService : IDisposable
         _watcher.Path = path;
         _watcher.Filter = "*.*";
         _watcher.Created += OnCreated;
+        _watcher.Changed += OnChanged;
         _watcher.IncludeSubdirectories = true; // Optional: monitor subdirectories too
         _watcher.EnableRaisingEvents = true;
 
         Console.WriteLine("FolderWatcherService started and watching: " + _watcher.Path);
+    }
+
+    private async void OnChanged(object sender, FileSystemEventArgs e)
+    {
+        try
+        {
+            var fileInfo = new FileInfo(e.FullPath);
+            var fileDetail = new
+            {
+                Extension = fileInfo.Extension,
+                Name = fileInfo.Name,
+                FullPath = fileInfo.FullName,
+                Size = fileInfo.Exists ? fileInfo.Length : 0,
+                Changed = fileInfo.Exists ? fileInfo.LastWriteTime : DateTime.MinValue,
+                ActionType = "File Changed"
+            };
+
+            var isAlreadyExist = Common.FileLists.Where(f => f.Name == fileInfo.Name && f.Extension == fileInfo.Extension).Any();
+
+            if (isAlreadyExist)
+            {
+                string json = JsonSerializer.Serialize(fileDetail);
+                await _hubContext.Clients.All.SendAsync("ReceiveMessage", json);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error sending notification: {ex.Message}");
+        }
     }
 
     private async void OnCreated(object sender, FileSystemEventArgs e)
@@ -42,14 +73,22 @@ public class FolderWatcherService : IDisposable
         {
             var fileInfo = new FileInfo(e.FullPath);
             var fileDetail = new
-            {
+            {   
+                Extension = fileInfo.Extension,
                 Name = fileInfo.Name,
                 FullPath = fileInfo.FullName,
                 Size = fileInfo.Exists ? fileInfo.Length : 0,
-                Created = fileInfo.Exists ? fileInfo.CreationTime : DateTime.MinValue
+                Created = fileInfo.Exists ? fileInfo.CreationTime : DateTime.MinValue,
+                ActionType = "File Created"
             };
-            string json = JsonSerializer.Serialize(fileDetail);
-            await _hubContext.Clients.All.SendAsync("ReceiveMessage", json);
+
+            var isAlreadyExist = Common.FileLists.Where(f => f.Name == fileInfo.Name && f.Extension == fileInfo.Extension).Any();
+
+            if (!isAlreadyExist)
+            {
+                string json = JsonSerializer.Serialize(fileDetail);
+                await _hubContext.Clients.All.SendAsync("ReceiveMessage", json);
+            }
         }
         catch (Exception ex)
         {
