@@ -2,24 +2,45 @@
 @page "/tracking-folder"
 @using Microsoft.AspNetCore.SignalR.Client
 @using System.Text.Json
+@using System.Diagnostics
 @using Tracking_Folder_Tool.Commons
 @using static Tracking_Folder_Tool.Commons.Common
 @using Radzen
 @using Radzen.Blazor
+@using System.IO
+@using Tracking_Folder_Tool.Services
 
 @implements IAsyncDisposable
 @inject NavigationManager Navigation
-
-<PageTitle>Tracking-Folder-Tool</PageTitle>
+@inject IConfiguration Configuration
+@inject IJSRuntime JSRuntime
+@inject DirectoryService DirectoryService
+@inject FolderWatcherService FolderWatcherService
 
 <RadzenStack Gap="10px" Style="width: 100%; padding-bottom: 10px;" AlignItems="AlignItems.Start" JustifyContent="JustifyContent.Center">
     <RadzenStack>
         <RadzenLabel Style="font-size: 24px; font-weight: 600">Tracking folder</RadzenLabel>
     </RadzenStack>
-    <RadzenStack>
-        <RadzenLabel Text="@($"Current folder")" Style="font-size: 18px; font-weight: 500"></RadzenLabel>
-        <RadzenLabel Text="@(Common.TargetPath)" Style="font-size: 16px; color: darkgreen; font-weight: 500"></RadzenLabel>
-    </RadzenStack>
+
+    <RadzenCard>
+        <RadzenStack Gap="1rem">
+            <RadzenLabel Text="Select folder" Style="font-size: 18px; font-weight: 500" />
+
+            <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem">
+                <RadzenTextBox @bind-Value="SelectedPath" Style="width: 300px" Placeholder="Enter or select folder path" />
+                <RadzenDropDown Data="@AvailableDirectories" @bind-Value="SelectedPath" TValue="string" Style="width: 300px" Change="@(args => OnPathChanged(args.ToString()))" />
+                <RadzenButton Text="Refresh Directories" Click=@RefreshDirectories />
+                <RadzenButton Text="Save Path" Click=@SaveFolderPath ButtonStyle="ButtonStyle.Success" />
+            </RadzenStack>
+
+            <RadzenLabel Text="Folder to tracking" Style="font-size: 18px; font-weight: 500" />
+            <RadzenStack Gap="10px" Orientation="Orientation.Horizontal">
+                <RadzenLabel Text="@FolderWatcherService.GetWatcherPath()" Style="font-size: 16px; color: darkgreen; font-weight: 500" />
+                <RadzenButton Text="Open Folder" Click=@OpenSelectedFolder ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small" Shade="Shade.Lighter" Variant="Variant.Outlined" />
+            </RadzenStack>
+        </RadzenStack>
+    </RadzenCard>
+
     <RadzenStack Visible=@(FileLists.Any())>
         <RadzenButton Text="Clear" Click="ResetFileLists" Style="width: contain" Size=ButtonSize.Small ButtonStyle=ButtonStyle.Primary Variant=Variant.Flat></RadzenButton>
     </RadzenStack>
@@ -42,9 +63,21 @@
 
 @code {
     private HubConnection? hubConnection;
+    private string SelectedPath { get; set; } = string.Empty;
+    private List<string> AvailableDirectories { get; set; } = new List<string>();
 
     protected override async Task OnInitializedAsync()
     {
+        var prevPath = Configuration["FolderPath"];
+        // Load initial folder path from appsettings.json
+        SelectedPath = prevPath ?? "No folder selected";
+        await RefreshDirectories();
+
+        if (!string.IsNullOrEmpty(prevPath))
+        {
+            FolderWatcherService.SetWatcherPath(prevPath);
+        }
+
         hubConnection = new HubConnectionBuilder()
             .WithUrl(Navigation.ToAbsoluteUri("/notificationHub"))
             .Build();
@@ -68,6 +101,16 @@
         await hubConnection.StartAsync();
     }
 
+    private async Task OnPathChanged(string? newPath)
+    {
+        if (!string.IsNullOrEmpty(newPath))
+        {
+            SelectedPath = newPath;
+            await RefreshDirectories();
+            StateHasChanged();
+        }
+    }
+
     public async ValueTask DisposeAsync()
     {
         if (hubConnection != null)
@@ -79,5 +122,110 @@
     private void ResetFileLists()
     {
         FileLists = new();
+    }
+
+    private async Task RefreshDirectories()
+    {
+        await Task.Run(() =>
+        {
+            AvailableDirectories = DirectoryService.GetDirectories(SelectedPath);
+            InvokeAsync(StateHasChanged);
+        });
+    }
+
+    private async Task OpenFolderDialog()
+    {
+        try
+        {
+            // Note: Blazor Server can't use browser-based folder pickers for full paths.
+            // For server-side folder selection, you need a custom solution or manual input.
+            // Here, we'll validate the entered path or use a default server directory.
+            if (string.IsNullOrEmpty(SelectedPath) || !Directory.Exists(SelectedPath))
+            {
+                // Default to a server-side directory for demonstration
+                SelectedPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+            }
+
+            if (Directory.Exists(SelectedPath))
+            {
+                StateHasChanged();
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Invalid folder path. Please enter a valid path.");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Error selecting folder: {ex.Message}");
+        }
+    }
+
+    private async Task SaveFolderPath()
+    {
+        try
+        {
+            if (!Directory.Exists(SelectedPath))
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Invalid folder path. Please select a valid folder.");
+                return;
+            }
+
+            // Read existing appsettings.json
+            var appSettingsPath = Path.Combine(Directory.GetCurrentDirectory(), "appsettings.json");
+            var json = await File.ReadAllTextAsync(appSettingsPath);
+            var jsonObj = JsonSerializer.Deserialize<Dictionary<string, object>>(json);
+
+            if (jsonObj != null)
+            {
+                // Update or add FolderPath
+                if (jsonObj.ContainsKey("FolderPath"))
+                {
+                    jsonObj["FolderPath"] = SelectedPath;
+                }
+                else
+                {
+                    jsonObj.Add("FolderPath", SelectedPath);
+                }
+            }
+
+            // Save updated appsettings.json
+            var updatedJson = JsonSerializer.Serialize(jsonObj, new JsonSerializerOptions { WriteIndented = true });
+
+            await File.WriteAllTextAsync(appSettingsPath, updatedJson);
+
+            // Rechange Path of FileWatcher
+            FolderWatcherService.SetWatcherPath(SelectedPath);
+
+            await JSRuntime.InvokeVoidAsync("alert", "Folder path saved successfully!");
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Error saving folder path: {ex.Message}");
+        }
+    }
+
+    private async Task OpenSelectedFolder()
+    {
+        try
+        {
+            if (!Directory.Exists(SelectedPath))
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Invalid folder path. Please select a valid folder.");
+                return;
+            }
+
+            // Open the folder in the system's file explorer
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = SelectedPath,
+                UseShellExecute = true,
+                Verb = "open"
+            });
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Error opening folder: {ex.Message}");
+        }
     }
 }

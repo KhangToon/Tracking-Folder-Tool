@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Radzen;
+using Tracking_Folder_Tool;
 using Tracking_Folder_Tool.Data;
+using Tracking_Folder_Tool.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,6 +15,8 @@ builder.Services.AddSingleton<FolderWatcherService>(); // <-- Add this line
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
 
+builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
+builder.Services.AddSingleton<DirectoryService>();
 
 var app = builder.Build();
 

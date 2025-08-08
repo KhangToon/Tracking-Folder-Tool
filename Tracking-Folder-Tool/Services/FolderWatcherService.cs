@@ -15,12 +15,31 @@ public class FolderWatcherService : IDisposable
     {
         _hubContext = hubContext;
         _watcher = new FileSystemWatcher();
-        StartWatching();
     }
 
-    private void StartWatching()
+    public string GetWatcherPath()
     {
-        string path = Common.TargetPath;
+        return _watcher.Path;
+    }
+
+    public void SetWatcherPath(string path)
+    {
+        if (string.IsNullOrEmpty(path))
+        {
+            throw new ArgumentNullException(nameof(path));
+        }
+
+        if (string.IsNullOrEmpty(_watcher.Path))
+        {
+            StartWatching(path);
+        }
+
+        _watcher.Path = path;
+    }
+
+    private void StartWatching(string path)
+    {
+        if (string.IsNullOrEmpty(path)) { return; }
 
         // Verify directory exists
         if (!Directory.Exists(path))
@@ -60,11 +79,20 @@ public class FolderWatcherService : IDisposable
                 string json = JsonSerializer.Serialize(fileDetail);
                 await _hubContext.Clients.All.SendAsync("ReceiveMessage", json);
             }
+            else
+            {
+                HandleWithFileChanged();
+            }
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Error sending notification: {ex.Message}");
         }
+    }
+
+    private void HandleWithFileChanged()
+    {
+
     }
 
     private async void OnCreated(object sender, FileSystemEventArgs e)
@@ -73,7 +101,7 @@ public class FolderWatcherService : IDisposable
         {
             var fileInfo = new FileInfo(e.FullPath);
             var fileDetail = new
-            {   
+            {
                 Extension = fileInfo.Extension,
                 Name = fileInfo.Name,
                 FullPath = fileInfo.FullName,

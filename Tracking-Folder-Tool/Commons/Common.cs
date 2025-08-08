@@ -4,9 +4,8 @@ namespace Tracking_Folder_Tool.Commons
 {
     public static class Common
     {
-        public static List<FileDetail> FileLists = [];
+        public static List<FileDetail> FileLists { get; set; } = [];
 
-        public static string TargetPath = @"D:\KHANG-DEV-DOC\FolderToTracking";
         public class FileDetail
         {
             public string Name { get; set; } = "";
@@ -16,6 +15,13 @@ namespace Tracking_Folder_Tool.Commons
             public string ActionType { get; set; } = "";
             public DateTime Created { get; set; }
             public DateTime Changed { get; set; }
+        }
+
+        public class FileInfoModel
+        {
+            public string Name { get; set; } = string.Empty;
+            public long Size { get; set; }
+            public DateTime LastModified { get; set; }
         }
     }
 
