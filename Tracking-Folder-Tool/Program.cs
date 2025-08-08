@@ -1,9 +1,17 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Radzen;
+using System.Diagnostics;
+using System.Net;
 using Tracking_Folder_Tool;
 using Tracking_Folder_Tool.Data;
 using Tracking_Folder_Tool.Services;
+
+// Find an available port
+var localIP = PortFinder.GetLocalIPAddress();
+IPAddress localIPAddress = IPAddress.Parse(localIP);
+var port = PortFinder.FindAvailablePort_CheckUsed(localIPAddress);
+var url = $"http://{localIP}:{port}";
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -41,5 +49,17 @@ app.MapBlazorHub();
 app.MapFallbackToPage("/_Host");
 app.MapHub<NotificationHub>("/notificationHub");
 
+// Open browser after application starts
+app.Urls.Add(url);
+app.Lifetime.ApplicationStarted.Register(() =>
+{
+    var psi = new ProcessStartInfo
+    {
+        FileName = url,
+        UseShellExecute = true
+    };
+    Process.Start(psi);
+});
+///////////
 
 app.Run();
