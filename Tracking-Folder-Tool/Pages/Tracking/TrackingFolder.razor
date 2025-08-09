@@ -9,6 +9,7 @@
 @using Radzen.Blazor
 @using System.IO
 @using Tracking_Folder_Tool.Services
+@using static Tracking_Folder_Tool.Services.CsvReaderService
 
 @implements IAsyncDisposable
 @inject NavigationManager Navigation
@@ -17,54 +18,84 @@
 @inject DirectoryService DirectoryService
 @inject FolderWatcherService FolderWatcherService
 
-<RadzenStack Gap="10px" Style="width: 100%; padding-bottom: 10px;" AlignItems="AlignItems.Start" JustifyContent="JustifyContent.Center">
-    <RadzenStack>
-        <RadzenLabel Style="font-size: 24px; font-weight: 600">Tracking folder</RadzenLabel>
-    </RadzenStack>
-
-    <RadzenCard>
-        <RadzenStack Gap="1rem">
-            <RadzenLabel Text="Select folder" Style="font-size: 18px; font-weight: 500" />
-
-            <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem">
-                <RadzenTextBox @bind-Value="SelectedPath" Style="width: 300px" Placeholder="Enter or select folder path" />
-                <RadzenDropDown Data="@AvailableDirectories" @bind-Value="SelectedPath" TValue="string" Style="width: 300px" Change="@(args => OnPathChanged(args.ToString()))" />
-                <RadzenButton Text="Refresh Directories" Click=@RefreshDirectories />
-                <RadzenButton Text="Save Path" Click=@SaveFolderPath ButtonStyle="ButtonStyle.Success" />
+<RadzenRow Style="width: 100%">
+    <RadzenColumn SizeSM="7" Style="width: 100%">
+        <RadzenStack Gap="10px" Style="width: 100%; padding-bottom: 10px;" AlignItems="AlignItems.Start" JustifyContent="JustifyContent.Center">
+            <RadzenStack>
+                <RadzenLabel Style="font-size: 24px; font-weight: 600">Tracking folder</RadzenLabel>
             </RadzenStack>
 
-            <RadzenLabel Text="Folder to tracking" Style="font-size: 18px; font-weight: 500" />
-            <RadzenStack Gap="10px" Orientation="Orientation.Horizontal">
-                <RadzenLabel Text="@FolderWatcherService.GetWatcherPath()" Style="font-size: 16px; color: darkgreen; font-weight: 500" />
-                <RadzenButton Text="Open Folder" Click=@OpenSelectedFolder ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small" Shade="Shade.Lighter" Variant="Variant.Outlined" />
+            <RadzenCard>
+                <RadzenStack Gap="1rem">
+                    <RadzenLabel Text="Select folder" Style="font-size: 18px; font-weight: 500" />
+
+                    <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem">
+                        <RadzenTextBox @bind-Value="SelectedPath" Style="width: 300px" Placeholder="Enter or select folder path" />
+                        <RadzenDropDown Data="@AvailableDirectories" @bind-Value="SelectedPath" TValue="string" Style="width: 300px" Change="@(args => OnPathChanged(args.ToString()))" />
+                        <RadzenButton Text="Refresh" Click=@RefreshDirectories />
+                        <RadzenButton Text="Save Path" Click=@SaveFolderPath ButtonStyle="ButtonStyle.Success" />
+                    </RadzenStack>
+
+                    <RadzenLabel Text="Folder to tracking" Style="font-size: 18px; font-weight: 500" />
+                    <RadzenStack Gap="10px" Orientation="Orientation.Horizontal">
+                        <RadzenLabel Text="@FolderWatcherService.GetWatcherPath()" Style="font-size: 16px; color: darkgreen; font-weight: 500" />
+                        <RadzenButton Text="Open Folder" Click=@OpenSelectedFolder ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small" Shade="Shade.Lighter" Variant="Variant.Outlined" />
+                    </RadzenStack>
+                </RadzenStack>
+            </RadzenCard>
+
+            <RadzenStack Visible=@(FileLists.Any())>
+                <RadzenButton Text="Clear" Click="ResetFileLists" Style="width: contain" Size=ButtonSize.Small ButtonStyle=ButtonStyle.Primary Variant=Variant.Flat></RadzenButton>
             </RadzenStack>
         </RadzenStack>
-    </RadzenCard>
+        <ul id="fileList">
+            @foreach (var file in FileLists)
+            {
+                <li>
+                    <b>@(FileLists.IndexOf(file) + 1) - @file.Name</b><br />
+                    Path: @file.FullPath<br />
+                    Name: @file.Name<br />
+                    Type: @file.Extension<br />
+                    Size: @file.Size bytes<br />
+                    CreatedAt: @file.Created<br />
+                    UpdatedAt: @file.Changed<br />
+                    Action: @file.ActionType
+                </li>
+            }
+        </ul>
+    </RadzenColumn>
 
-    <RadzenStack Visible=@(FileLists.Any())>
-        <RadzenButton Text="Clear" Click="ResetFileLists" Style="width: contain" Size=ButtonSize.Small ButtonStyle=ButtonStyle.Primary Variant=Variant.Flat></RadzenButton>
-    </RadzenStack>
-</RadzenStack>
-<ul id="fileList">
-    @foreach (var file in FileLists)
-    {
-        <li>
-            <b>@(FileLists.IndexOf(file) + 1) - @file.Name</b><br />
-            Path: @file.FullPath<br />
-            Name: @file.Name<br />
-            Type: @file.Extension<br />
-            Size: @file.Size bytes<br />
-            CreatedAt: @file.Created<br />
-            UpdatedAt: @file.Changed<br />
-            Action: @file.ActionType
-        </li>
-    }
-</ul>
+    <RadzenColumn SizeSM="5" Style="width: 100%">
+        <RadzenDataGrid Data="@CSVDatas" TItem="Dictionary<string, string>" AllowFiltering="true" AllowPaging="true" PageSize="10" AllowSorting="true">
+            <Columns>
+                @if (CSVHeaders != null)
+                {
+                    @foreach (var header in CSVHeaders)
+                    {
+                        <RadzenDataGridColumn Width="60px" Frozen="true" FrozenPosition="FrozenColumnPosition.Left" Filterable="true"
+                                              TItem="Dictionary<string, string>" Title="#"
+                                              Property="@header" TextAlign="TextAlign.Center">
+                            <HeaderTemplate>
+                                <span style="font-weight: 600; font-size: 14px; color: white">@header</span>
+                            </HeaderTemplate>
+                            <Template Context="record">
+                                <span style="font-weight: bold;">@record.Values.ToString()</span>
+                            </Template>
+                        </RadzenDataGridColumn>
+                    }
+                }
+            </Columns>
+        </RadzenDataGrid>
+    </RadzenColumn>
+</RadzenRow>
 
 @code {
     private HubConnection? hubConnection;
     private string SelectedPath { get; set; } = string.Empty;
     private List<string> AvailableDirectories { get; set; } = new List<string>();
+    private CsvReader csvReader = new();
+    private List<Dictionary<string, string>>? CSVDatas;
+    private List<string>? CSVHeaders;
 
     protected override async Task OnInitializedAsync()
     {
@@ -91,7 +122,14 @@
                 {
                     if (!FileLists.Any(f => f.Name == file.Name))
                     {
+                        // Raise folder change
                         FileLists.Add(file);
+
+                        // Read CSV file
+                        var csv = ReadCsvData(file.FullPath);
+
+                        CSVDatas = csv.Data;
+                        CSVHeaders = csv.Headers;
                     }
                     StateHasChanged();
                 }
@@ -99,6 +137,33 @@
         });
 
         await hubConnection.StartAsync();
+    }
+
+    private (List<string>? Headers, List<Dictionary<string, string>>? Data) ReadCsvData(string filePath)
+    {
+        List<Dictionary<string, string>>? result = null;
+        List<string>? headers = null;
+
+        try
+        {
+            var csv = csvReader.ReadCsvFileDynamic(filePath);
+            result = csv.Data;
+            headers = csv.Headers;
+            foreach (var row in result)
+            {
+                foreach (var kvp in row)
+                {
+                    Console.WriteLine($"{kvp.Key}: {kvp.Value}");
+                }
+                Console.WriteLine("---");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error: {ex.Message}");
+        }
+
+        return (headers, result);
     }
 
     private async Task OnPathChanged(string? newPath)

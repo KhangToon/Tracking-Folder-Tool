@@ -65,55 +65,49 @@ namespace Tracking_Folder_Tool.Services
             }
 
             /// <summary>
-            /// Reads a CSV file dynamically (when the structure is unknown).
+            /// Reads a CSV file and returns both headers and data.
             /// </summary>
             /// <param name="filePath">Path to the CSV file.</param>
-            /// <returns>List of dictionaries where each dictionary represents a row.</returns>
-            public List<Dictionary<string, string>> ReadCsvFileDynamic(string filePath)
+            /// <returns>A tuple containing the list of headers and the list of row data as dictionaries.</returns>
+            public (List<string> Headers, List<Dictionary<string, string>> Data) ReadCsvFileDynamic(string filePath)
             {
                 var result = new List<Dictionary<string, string>>();
+                List<string> headers = [];
 
                 try
                 {
-                    // Validate file existence
                     if (!File.Exists(filePath))
                     {
                         throw new FileNotFoundException("CSV file not found.", filePath);
                     }
 
-                    // Read all lines from the CSV file
                     var lines = File.ReadAllLines(filePath);
-
                     if (lines.Length == 0)
                     {
                         throw new InvalidOperationException("CSV file is empty.");
                     }
 
                     // Get headers from the first line
-                    var headers = lines[0].Split(',').Select(h => h.Trim()).ToArray();
+                    headers = lines[0].Split(',').Select(h => h.Trim()).ToList();
 
                     // Process each data row
                     for (int i = 1; i < lines.Length; i++)
                     {
                         var values = lines[i].Split(',').Select(v => v.Trim()).ToArray();
-
-                        // Ensure the row has the expected number of columns
-                        if (values.Length != headers.Length)
+                        if (values.Length != headers.Count)
                         {
-                            throw new InvalidOperationException($"Invalid data format at row {i + 1}. Expected {headers.Length} columns, found {values.Length}.");
+                            throw new InvalidOperationException($"Invalid data format at row {i + 1}. Expected {headers.Count} columns, found {values.Length}.");
                         }
 
-                        // Create a dictionary for the row
                         var row = new Dictionary<string, string>();
-                        for (int j = 0; j < headers.Length; j++)
+                        for (int j = 0; j < headers.Count; j++)
                         {
                             row[headers[j]] = values[j];
                         }
-
                         result.Add(row);
                     }
 
-                    return result;
+                    return (headers, result);
                 }
                 catch (Exception ex)
                 {
@@ -121,12 +115,13 @@ namespace Tracking_Folder_Tool.Services
                 }
             }
         }
+    }
 
-        public class CsvDataModel
-        {
-            public int Id { get; set; }
-            public string Name { get; set; } = string.Empty;
-            public int Age { get; set; }
-        }
+    public class CsvDataModel
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public int Age { get; set; }
     }
 }
+
