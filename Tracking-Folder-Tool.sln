@@ -5,6 +5,8 @@ VisualStudioVersion = 17.14.36301.6
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tracking-Folder-Tool", "Tracking-Folder-Tool\Tracking-Folder-Tool.csproj", "{6AF880A8-9968-4881-8609-BE3EEA802F66}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TrackingFolderWorker", "TrackingFolderWorker\TrackingFolderWorker.csproj", "{AB2FE557-191C-431E-BC3A-47FB1DC128EB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{6AF880A8-9968-4881-8609-BE3EEA802F66}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6AF880A8-9968-4881-8609-BE3EEA802F66}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6AF880A8-9968-4881-8609-BE3EEA802F66}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AB2FE557-191C-431E-BC3A-47FB1DC128EB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AB2FE557-191C-431E-BC3A-47FB1DC128EB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AB2FE557-191C-431E-BC3A-47FB1DC128EB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AB2FE557-191C-431E-BC3A-47FB1DC128EB}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
