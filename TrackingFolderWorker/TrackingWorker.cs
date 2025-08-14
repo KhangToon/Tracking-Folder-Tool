@@ -1,6 +1,7 @@
 ﻿using ConsoleTables;
 using System.Net.Http.Json;
 using System.Text.Json;
+using TrackingFolderWorker.Logs;
 using TrackingFolderWorker.Models;
 using TrackingFolderWorker.Services;
 using static System.Runtime.InteropServices.JavaScript.JSType;
@@ -30,21 +31,32 @@ namespace TrackingFolderWorker
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            // Get tracking folder path from configuration or environment variable
-            string? folderPath = _configuration["TrackingFolderPath"];
-
-            if (string.IsNullOrEmpty(folderPath) || !Directory.Exists(folderPath))
+            try
             {
-                _logger.LogError("Invalid or missing TrackingFolderPath in appsettings.json.");
-                return;
+                // Get tracking folder path from configuration or environment variable
+                string? folderPath = _configuration["TrackingFolderPath"];
+
+                if (string.IsNullOrEmpty(folderPath) || !Directory.Exists(folderPath))
+                {
+                    _logger.LogError("Invalid or missing TrackingFolderPath in appsettings.json.");
+                    return;
+                }
+
+                // Start watching the specified folder
+                StartWatching(folderPath);
+
+                while (!stoppingToken.IsCancellationRequested)
+                {
+                    //_logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
+
+                    await Task.Delay(1000, stoppingToken); // keep service alive
+                }
             }
-
-            // Start watching the specified folder
-            StartWatching(folderPath);
-
-            while (!stoppingToken.IsCancellationRequested)
+            catch (Exception ex)
             {
-                await Task.Delay(1000, stoppingToken); // keep service alive
+                _logger.LogError(ex, "An error occurred in the worker.");
+                //_logger.LogInformation(ex.Message);
+                Environment.Exit(1); // Exit with non-zero code for Windows Service recovery
             }
         }
 
@@ -65,7 +77,7 @@ namespace TrackingFolderWorker
             _watcher.IncludeSubdirectories = true; // Optional: monitor subdirectories too
             _watcher.EnableRaisingEvents = true;
 
-            Console.WriteLine("FolderWatcherService started and watching: " + _watcher.Path);
+            _logger.LogInformation("FolderWatcherService started and watching: " + _watcher.Path);
         }
 
         private async void OnChanged(object sender, FileSystemEventArgs e)
@@ -99,19 +111,16 @@ namespace TrackingFolderWorker
                     if (!response.IsSuccessStatusCode)
                     {
                         _logger.LogError($"Failed to push data: {response.StatusCode}");
-                        Console.WriteLine($"Failed to push data: {response.StatusCode}");
                     }
                     else
                     {
                         _logger.LogInformation("Data pushed successfully." + DateTime.Now);
-                        Console.WriteLine("Data pushed successfully." + DateTime.Now);
                     }
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogError($"Error: {ex.Message}");
-                Console.WriteLine($"Error sending notification: {ex.Message}");
             }
         }
 
@@ -130,62 +139,49 @@ namespace TrackingFolderWorker
                     ActionType = "File Created"
                 };
 
+                // Only tracking .csv file
+                if (fileDetail.Extension != ".csv") return;
+
                 // Log file details to console
-                Console.WriteLine("File Details:");
-                Console.WriteLine($"  Name: {fileDetail.Name}");
-                Console.WriteLine($"  Extension: {fileDetail.Extension}");
-                Console.WriteLine($"  Full Path: {fileDetail.FullPath}");
-                Console.WriteLine($"  Size: {fileDetail.Size} bytes");
-                Console.WriteLine($"  Created: {fileDetail.Created}");
-                Console.WriteLine($"  Action: {fileDetail.ActionType}");
+                ConsoleLog.Log("File Details:");
+                ConsoleLog.Log($"  Name: {fileDetail.Name}");
+                ConsoleLog.Log($"  Extension: {fileDetail.Extension}");
+                ConsoleLog.Log($"  Full Path: {fileDetail.FullPath}");
+                ConsoleLog.Log($"  Size: {fileDetail.Size} bytes");
+                ConsoleLog.Log($"  Created: {fileDetail.Created}");
+                ConsoleLog.Log($"  Action: {fileDetail.ActionType}");
 
                 var isAlreadyExist = FileLists.Where(f => f.Name == fileInfo.Name && f.Extension == fileInfo.Extension).Any();
 
                 if (!isAlreadyExist)
                 {
                     //string json = JsonSerializer.Serialize(fileDetail);
-                    // Only tracking csv files
-                    //if (fileDetail.Extension != ".csv") return;
 
-                    //string json = JsonSerializer.Serialize(fileDetail);
                     // Extract data from file 
                     var (Headers, Data) = CsvReaderService.CsvReader.ReadCsvFileDynamic(fileDetail.FullPath);
 
-                    // Take only the first 10 headers
-                    var selectedHeaders = Headers.Take(10).ToList();
+                    // Log data table to console
+                    ConsoleLog.LogData(Headers, Data, 10, 10);
 
-                    // Display CSV data as a table with up to 10 columns
-                    Console.WriteLine("\nCSV Data Table (First 10 Columns):");
-                    var table = new ConsoleTable(selectedHeaders.ToArray());
-
-                    // Add each row to the table, only including values for selected headers
-                    foreach (var record in Data)
-                    {
-                        var values = selectedHeaders.Select(header => record.TryGetValue(header, out var value) ? value : string.Empty).ToArray();
-                        table.AddRow(values);
-                    }
-
-                    // Write the table to console
-                    table.Write(Format.Alternative);
                     // Send data to API
                     var response = await _httpClient.PostAsJsonAsync("data", Data);
 
                     if (!response.IsSuccessStatusCode)
                     {
                         _logger.LogError($"Failed to push data: {response.StatusCode}");
-                        Console.WriteLine($"Failed to push data: {response.StatusCode}");
                     }
                     else
                     {
                         _logger.LogInformation("Data pushed successfully." + DateTime.Now);
-                        Console.WriteLine("Data pushed successfully." + DateTime.Now);
                     }
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error sending notification: {ex.Message}");
+                _logger.LogError($"Error sending notification: {ex.Message}");
             }
         }
+
+
     }
 }

@@ -3,6 +3,7 @@
 var host = Host.CreateDefaultBuilder(args)
     .ConfigureServices((hostContext, services) =>
     {
+        // Add minimal API
         services.AddHostedService<TrackingWorker>();
         services.AddHttpClient();
         // Đăng ký IConfiguration để inject vào Worker
