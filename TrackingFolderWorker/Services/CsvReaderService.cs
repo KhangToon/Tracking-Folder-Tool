@@ -69,10 +69,11 @@ namespace TrackingFolderWorker.Services
             /// </summary>
             /// <param name="filePath">Path to the CSV file.</param>
             /// <returns>A tuple containing the list of headers and the list of row data as dictionaries.</returns>
-            public static (List<string> Headers, List<Dictionary<string, string>> Data) ReadCsvFileDynamic(string filePath)
+            public static (List<string> Headers, List<Dictionary<string, string>> Data) ReadCsvFileDynamic(string filePath, List<string>? targetHeaders = null)
             {
                 var result = new List<Dictionary<string, string>>();
-                List<string> headers = [];
+                List<string> originheaders = [];
+                var headersWithIndex = new Dictionary<string, int>();
 
                 try
                 {
@@ -87,27 +88,43 @@ namespace TrackingFolderWorker.Services
                         throw new InvalidOperationException("CSV file is empty.");
                     }
 
-                    // Get headers from the first line
-                    headers = lines[0].Split(',').Select(h => h.Trim()).ToList();
+                    // Get origin column headers 
+                    originheaders = lines[0].Split(',').Select(h => h.Trim()).ToList();
+
+                    if (targetHeaders != null)
+                    {
+                        foreach (var hd in targetHeaders)
+                        {
+                            var targeIndex = originheaders.IndexOf(hd.Trim());
+
+                            if (targeIndex >= 0)
+                            {
+                                headersWithIndex.Add(hd.Trim(), targeIndex);
+                            }
+                        }
+                    }
 
                     // Process each data row
                     for (int i = 1; i < lines.Length; i++)
                     {
                         var values = lines[i].Split(',').Select(v => v.Trim()).ToArray();
-                        if (values.Length != headers.Count)
-                        {
-                            throw new InvalidOperationException($"Invalid data format at row {i + 1}. Expected {headers.Count} columns, found {values.Length}.");
-                        }
+
+                        //if (values.Length != headers.Count)
+                        //{
+                        //    throw new InvalidOperationException($"Invalid data format at row {i + 1}. Expected {headers.Count} columns, found {values.Length}.");
+                        //}
 
                         var row = new Dictionary<string, string>();
-                        for (int j = 0; j < headers.Count; j++)
+
+                        foreach (var hd in headersWithIndex)
                         {
-                            row[headers[j]] = values[j];
+                            row[hd.Key] = values[hd.Value];
                         }
+
                         result.Add(row);
                     }
 
-                    return (headers, result);
+                    return (targetHeaders ?? originheaders, result);
                 }
                 catch (Exception ex)
                 {

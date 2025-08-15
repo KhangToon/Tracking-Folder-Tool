@@ -14,6 +14,9 @@ namespace TrackingFolderWorker
         private readonly HttpClient _httpClient;
         private readonly FileSystemWatcher _watcher;
         private readonly IConfiguration _configuration;
+        private readonly string? _folderPath;
+        private readonly List<string>? _targetHeaders;
+        private readonly int? _getrows;
 
         public IEnumerable<FileDetail> FileLists { get; private set; }
 
@@ -27,23 +30,25 @@ namespace TrackingFolderWorker
             _watcher = new FileSystemWatcher(); // Initialize _watcher
             FileLists = []; // Initialize FileLists
             _configuration = configuration;
+
+            // Get tracking folder path from configuration or environment variable
+            _folderPath = _configuration["TrackingFolderPath"];
+            _targetHeaders = _configuration["Headers"]?.Split(',').Select(h => h.Trim()).ToList();
+            _getrows = int.TryParse(_configuration["GetRow"]?.ToString(), out int r) ? r : null;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             try
             {
-                // Get tracking folder path from configuration or environment variable
-                string? folderPath = _configuration["TrackingFolderPath"];
-
-                if (string.IsNullOrEmpty(folderPath) || !Directory.Exists(folderPath))
+                if (string.IsNullOrEmpty(_folderPath) || !Directory.Exists(_folderPath))
                 {
                     _logger.LogError("Invalid or missing TrackingFolderPath in appsettings.json.");
                     return;
                 }
 
                 // Start watching the specified folder
-                StartWatching(folderPath);
+                StartWatching(_folderPath);
 
                 while (!stoppingToken.IsCancellationRequested)
                 {
@@ -158,10 +163,10 @@ namespace TrackingFolderWorker
                     //string json = JsonSerializer.Serialize(fileDetail);
 
                     // Extract data from file 
-                    var (Headers, Data) = CsvReaderService.CsvReader.ReadCsvFileDynamic(fileDetail.FullPath);
+                    var (Headers, Data) = CsvReaderService.CsvReader.ReadCsvFileDynamic(fileDetail.FullPath, _targetHeaders);
 
                     // Log data table to console
-                    ConsoleLog.LogData(Headers, Data, 10, 10);
+                    ConsoleLog.LogData(Headers, Data, null, _getrows);
 
                     // Send data to API
                     var response = await _httpClient.PostAsJsonAsync("data", Data);
