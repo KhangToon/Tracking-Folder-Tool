@@ -1,0 +1,6 @@
+@TrackingFolder.API_HostAddress = http://localhost:5127
+
+GET {{TrackingFolder.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
