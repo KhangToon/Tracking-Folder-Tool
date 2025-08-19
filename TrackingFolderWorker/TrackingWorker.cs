@@ -15,6 +15,8 @@ namespace TrackingFolderWorker
         private readonly FileSystemWatcher _watcher;
         private readonly IConfiguration _configuration;
         private readonly string? _folderPath;
+        private readonly string? _hostAPIurl;
+        private readonly string? _goldExId;
         private readonly List<string>? _targetHeaders;
         private readonly int? _getrows;
 
@@ -24,17 +26,22 @@ namespace TrackingFolderWorker
 
         public TrackingWorker(ILogger<TrackingWorker> logger, IHttpClientFactory httpClientFactory, IConfiguration configuration)
         {
+            _configuration = configuration;
+
+            _goldExId = _configuration["GoldExpertID"];
+            _hostAPIurl = _configuration["Host_API"];
             _logger = logger;
             _httpClient = httpClientFactory.CreateClient();
-            _httpClient.BaseAddress = new Uri("http://localhost:5000/api/"); // API Backend URL
+            _httpClient.BaseAddress = new Uri($"{_hostAPIurl}"); // API Backend URL
             _watcher = new FileSystemWatcher(); // Initialize _watcher
             FileLists = []; // Initialize FileLists
-            _configuration = configuration;
 
             // Get tracking folder path from configuration or environment variable
             _folderPath = _configuration["TrackingFolderPath"];
             _targetHeaders = _configuration["Headers"]?.Split(',').Select(h => h.Trim()).ToList();
             _getrows = int.TryParse(_configuration["GetRow"]?.ToString(), out int r) ? r : null;
+
+            _logger.LogInformation("Remote API host: " + _httpClient.BaseAddress + $"/{_goldExId}");
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -85,50 +92,6 @@ namespace TrackingFolderWorker
             _logger.LogInformation("FolderWatcherService started and watching: " + _watcher.Path);
         }
 
-        private async void OnChanged(object sender, FileSystemEventArgs e)
-        {
-            try
-            {
-                var fileInfo = new FileInfo(e.FullPath);
-                var fileDetail = new
-                {
-                    Extension = fileInfo.Extension,
-                    Name = fileInfo.Name,
-                    FullPath = fileInfo.FullName,
-                    Size = fileInfo.Exists ? fileInfo.Length : 0,
-                    Changed = fileInfo.Exists ? fileInfo.LastWriteTime : DateTime.MinValue,
-                    ActionType = "File Changed"
-                };
-
-                var isAlreadyExist = FileLists.Where(f => f.Name == fileInfo.Name && f.Extension == fileInfo.Extension).Any();
-
-                if (isAlreadyExist)
-                {
-                    // Only tracking csv files
-                    //if (fileDetail.Extension != ".csv") return;
-
-                    //string json = JsonSerializer.Serialize(fileDetail);
-                    // Extract data from file 
-                    var (Headers, Data) = CsvReaderService.CsvReader.ReadCsvFileDynamic(fileDetail.FullPath);
-
-                    var response = await _httpClient.PostAsJsonAsync("data", Data);
-
-                    if (!response.IsSuccessStatusCode)
-                    {
-                        _logger.LogError($"Failed to push data: {response.StatusCode}");
-                    }
-                    else
-                    {
-                        _logger.LogInformation("Data pushed successfully." + DateTime.Now);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError($"Error: {ex.Message}");
-            }
-        }
-
         private async void OnCreated(object sender, FileSystemEventArgs e)
         {
             try
@@ -166,10 +129,14 @@ namespace TrackingFolderWorker
                     var (Headers, Data) = CsvReaderService.CsvReader.ReadCsvFileDynamic(fileDetail.FullPath, _targetHeaders);
 
                     // Log data table to console
-                    ConsoleLog.LogData(Headers, Data, null, _getrows);
+                    // ConsoleLog.LogData(Headers, Data, null, _getrows);
+
+                    // Serialization Data
+                    //var jsonData = JsonSerializer.Serialize(Data);
+                    //_logger.LogInformation("Sending data: " + jsonData);
 
                     // Send data to API
-                    var response = await _httpClient.PostAsJsonAsync("data", Data);
+                    var response = await _httpClient.PostAsJsonAsync($"/{_goldExId}", Data);
 
                     if (!response.IsSuccessStatusCode)
                     {
