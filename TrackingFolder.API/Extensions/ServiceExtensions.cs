@@ -1,9 +1,11 @@
 ﻿using FluentValidation;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
 using TrackingFolder.API.AppContext;
 using TrackingFolder.API.Exceptions;
 using TrackingFolder.API.Interfaces;
+using TrackingFolder.API.Mapper;
 using TrackingFolder.API.Services;
 
 namespace TrackingFolder.API.Extensions
@@ -12,12 +14,7 @@ namespace TrackingFolder.API.Extensions
     /// 
     /// </summary>
     public static class ServiceExtensions
-    {   
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="builder"></param>
-        /// <exception cref="ArgumentNullException"></exception>
+    {
         public static void AddApplicationServices(this IHostApplicationBuilder builder)
         {
             ArgumentNullException.ThrowIfNull(builder);
@@ -31,6 +28,7 @@ namespace TrackingFolder.API.Extensions
             });
 
             // Register services in the dependency injection container
+            builder.Services.AddAutoMapper(typeof(GExMeasureResultProfile));
 
             // Adding validators from the current assembly
             builder.Services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());

@@ -1,6 +1,7 @@
 ﻿namespace TrackingFolder.API.Contracts.Requests
 {
     public record UpdateGoldExpertMeasureResult(
+        Guid Id,
         DateTime Date,
         TimeSpan Time,
         double Reading,

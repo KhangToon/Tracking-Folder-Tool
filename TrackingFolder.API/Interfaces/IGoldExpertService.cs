@@ -5,10 +5,10 @@ namespace TrackingFolder.API.Interfaces
 {
     public interface IGoldExpertService
     {
-        Task<GExMeasureResponse> AddExpertMeasureAsync(CreateGoldExpertMeasureResult createGExMeasureRequest);
-        Task<GExMeasureResponse> GetExpertMeasureByIdAsync(Guid id);
-        Task<IEnumerable<GExMeasureResponse>> GetExpertMeasuresAsync();
-        Task<GExMeasureResponse> UpdateExpertMeasureAsync(Guid id, UpdateGoldExpertMeasureResult updateGExMeasureRequest);
-        Task<bool> DeleteExpertMeasureAsync(Guid id);
+        Task<Response<string>> AddGExpertMeasureAsync(CreateGoldExpertMeasureResult createGExMeasureRequest);
+        Task<Response<GExMeasureResponse>> GetGExpertMeasureByIdAsync(Guid id);
+        Task<Response<IEnumerable<GExMeasureResponse>>> GetGExpertMeasuresAsync();
+        Task<Response<string>> UpdateGExpertMeasureAsync(Guid id, UpdateGoldExpertMeasureResult updateGExMeasureRequest);
+        Task<Response<bool>> DeleteGExpertMeasureAsync(Guid id);
     }
 }

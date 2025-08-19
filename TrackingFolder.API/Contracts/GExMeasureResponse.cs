@@ -2,6 +2,8 @@
 {
     public record GExMeasureResponse
     {
+        public Guid Id { get; set; }
+        public Guid GExMachineId { get; set; }
         public DateTime Date { get; set; }
         public TimeSpan Time { get; set; }
         public double Reading { get; set; }

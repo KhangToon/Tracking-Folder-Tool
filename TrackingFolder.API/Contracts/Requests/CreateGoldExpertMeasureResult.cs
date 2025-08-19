@@ -20,6 +20,7 @@
     /// <param name="PassFail"></param>
     /// <param name="LiveTimeTotal"></param>
     public record CreateGoldExpertMeasureResult(
+        Guid GExMachineId,
         DateTime Date,
         TimeSpan Time,
         double Reading,

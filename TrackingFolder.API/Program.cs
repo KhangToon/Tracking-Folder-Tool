@@ -1,60 +1,61 @@
+using AutoMapper;
+using Microsoft.AspNetCore.Mvc;
+using System;
 using System.Reflection;
+using TrackingFolder.API.Contracts;
 using TrackingFolder.API.Endpoints;
 using TrackingFolder.API.Extensions;
+using TrackingFolder.API.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+// Register application services and dependencies
+builder.AddApplicationServices();
 
-////
-// Register application services
-builder.AddApplicationServices();   
-
+// Add controllers and minimal API explorer
 builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 
-////
+// Configure Swagger/OpenAPI
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new() { Title = "Gold Expert Measure API", Version = "v1", Description = "Minimal API" });
-
-    // Set the comments path for the Swagger JSON and UI.
-    var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
-    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
-    c.IncludeXmlComments(xmlPath);
+    // Optionally include XML comments for better documentation
+    // var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    // var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+    // if (File.Exists(xmlPath))
+    // {
+    //     c.IncludeXmlComments(xmlPath);
+    // }
 });
 
-// Enable CORS (enable for call api from frontend)
+// Enable CORS for frontend integration
 builder.Services.AddCors(options =>
 {
-    options.AddDefaultPolicy(builder => builder.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
+    options.AddDefaultPolicy(policy => policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
 });
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// Enable Swagger UI in development
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+// Map API endpoints under /api/v1
+//app.MapGroup("/api/v1")
+//   .WithTags("Gold Expert Measure API")
+//   .MapGoldExpertEndpoints();
+
+app.MapGoldExpertEndpoints();
+
+
 
 app.UseHttpsRedirection();
-
-////
 app.UseExceptionHandler();
-
 app.UseAuthorization();
-
-app.MapControllers();
-
 app.UseCors();
-
-////
-// Map API endpoints
-app.MapGroup("/api/v1/")
-   .WithTags("Gold Expert Measure API")
-   .MapGoldExpertEndpoints();
+app.MapControllers();
 
 app.Run();

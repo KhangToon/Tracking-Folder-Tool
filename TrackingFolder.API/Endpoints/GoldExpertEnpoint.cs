@@ -16,53 +16,64 @@ namespace TrackingFolder.API.Endpoints
         /// <returns>The updated <see cref="IEndpointRouteBuilder"/>.</returns>
         public static IEndpointRouteBuilder MapGoldExpertEndpoints(this IEndpointRouteBuilder app)
         {
-            // Define the endpoints
-
             // GET: /api/v1/gold-expert-measures
             app.MapGet("/api/v1/gold-expert-measures", async (IGoldExpertService service) =>
             {
-                return await service.GetExpertMeasuresAsync();
+                var result = await service.GetGExpertMeasuresAsync();
+
+                return Results.Ok(result);
             })
             .WithName("GetAllGoldExpertMeasures")
-            .Produces<IEnumerable<GExMeasureResponse>>(StatusCodes.Status200OK);
+            .WithOpenApi();
 
-            // GET: /api/v1/gold-expert-measures/{id: guid}
+            // GET: /api/v1/gold-expert-measures/{id:guid}
             app.MapGet("/api/v1/gold-expert-measures/{id:guid}", async (Guid id, IGoldExpertService service) =>
             {
-                return await service.GetExpertMeasureByIdAsync(id);
+                return await service.GetGExpertMeasureByIdAsync(id);
             })
             .WithName("GetGoldExpertMeasureById")
-            .Produces<GExMeasureResponse>(StatusCodes.Status200OK)
+            .WithOpenApi()
+            .Produces<Response<GExMeasureResponse>>(StatusCodes.Status200OK)
             .Produces<ErrorResponse>(StatusCodes.Status404NotFound);
 
             // POST: /api/v1/gold-expert-measures
             app.MapPost("/api/v1/gold-expert-measures", async (CreateGoldExpertMeasureResult request, IGoldExpertService service) =>
             {
-                return await service.AddExpertMeasureAsync(request);
+                return await service.AddGExpertMeasureAsync(request);
             })
             .WithName("AddGoldExpertMeasure")
-            .Produces<GExMeasureResponse>(StatusCodes.Status201Created)
+            .WithOpenApi()
+            .Produces<Response<string>>(StatusCodes.Status201Created)
             .Produces<ErrorResponse>(StatusCodes.Status400BadRequest);
 
-            // PUT: /api/v1/gold-expert-measures/{id: guid}
+            // PUT: /api/v1/gold-expert-measures/{id:guid}
             app.MapPut("/api/v1/gold-expert-measures/{id:guid}", async (Guid id, UpdateGoldExpertMeasureResult request, IGoldExpertService service) =>
             {
-                return await service.UpdateExpertMeasureAsync(id, request);
+                return await service.UpdateGExpertMeasureAsync(id, request);
             })
             .WithName("UpdateGoldExpertMeasure")
-            .Produces<GExMeasureResponse>(StatusCodes.Status200OK)
+            .WithOpenApi()
+            .Produces<Response<string>>(StatusCodes.Status200OK)
             .Produces<ErrorResponse>(StatusCodes.Status404NotFound);
 
-            // DELETE: /api/v1/gold-expert-measures/{id: guid}
+            // DELETE: /api/v1/gold-expert-measures/{id:guid}
             app.MapDelete("/api/v1/gold-expert-measures/{id:guid}", async (Guid id, IGoldExpertService service) =>
             {
-                return await service.DeleteExpertMeasureAsync(id);
+                return await service.DeleteGExpertMeasureAsync(id);
             })
             .WithName("DeleteGoldExpertMeasure")
-            .Produces(StatusCodes.Status204NoContent)
+            .WithOpenApi()
+            .Produces<Response<bool>>(StatusCodes.Status200OK)
             .Produces<ErrorResponse>(StatusCodes.Status404NotFound);
 
             return app;
+        }
+
+        private static async Task<Response<IEnumerable<GExMeasureResponse>>> HandleAsync(IGoldExpertService service)
+        {
+            var result = await service.GetGExpertMeasuresAsync();
+
+            return result;
         }
     }
 }
