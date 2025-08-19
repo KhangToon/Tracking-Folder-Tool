@@ -10,5 +10,8 @@ namespace TrackingFolder.API.Interfaces
         Task<Response<IEnumerable<GExMeasureResponse>>> GetGExpertMeasuresAsync();
         Task<Response<string>> UpdateGExpertMeasureAsync(Guid id, UpdateGoldExpertMeasureResult updateGExMeasureRequest);
         Task<Response<bool>> DeleteGExpertMeasureAsync(Guid id);
+
+        Task<Response<IEnumerable<CsvColumnHeaderResponse>>> GetCsvColumnHeaders(GetGExColumnHeadersRequest request);
+        Task<Response<string>> AddGExListMeasureAsync(List<Dictionary<string, string>> data);
     }
 }

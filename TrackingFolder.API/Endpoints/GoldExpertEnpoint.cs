@@ -1,4 +1,6 @@
-﻿using TrackingFolder.API.Contracts;
+﻿using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Mvc;
+using TrackingFolder.API.Contracts;
 using TrackingFolder.API.Contracts.Requests;
 using TrackingFolder.API.Interfaces;
 
@@ -9,13 +11,46 @@ namespace TrackingFolder.API.Endpoints
     /// </summary>
     public static class GoldExpertEnpoint
     {
+        private static readonly string apiVer = "v1";
+        private static readonly string gExDefaultSerial = "default";
         /// <summary>
         /// Maps the Gold Expert endpoints to the specified <see cref="IEndpointRouteBuilder"/>.
         /// </summary>
         /// <param name="app">The endpoint route builder to map the endpoints to.</param>
         /// <returns>The updated <see cref="IEndpointRouteBuilder"/>.</returns>
         public static IEndpointRouteBuilder MapGoldExpertEndpoints(this IEndpointRouteBuilder app)
-        {   
+        {
+            // GET: /api/v1/gold-expert-headers
+            app.MapGet($"/api/{apiVer}/{gExDefaultSerial}/headers", async (IGoldExpertService service) =>
+            {
+                var request = new GetGExColumnHeadersRequest { GExSerial = gExDefaultSerial };
+
+                var result = await service.GetCsvColumnHeaders(request);
+
+                return Results.Ok(result.Data);
+            })
+            .WithName("GetAllGoldExpertDataHeadersBySerialNumber")
+            .WithOpenApi();
+
+            var dataStore = new List<Dictionary<string, string>>(); // for testing
+            app.MapGet($"/api/{apiVer}/{gExDefaultSerial}", () => Results.Ok(dataStore));
+
+            app.MapPost($"/api/{apiVer}/{gExDefaultSerial}", async ([FromBody] List<Dictionary<string, string>> data, IGoldExpertService service) =>
+            {
+                var result = await service.AddGExListMeasureAsync(data);
+
+                if (result.Success)
+                {
+                    dataStore = data;
+                }
+                else dataStore.Clear();
+
+            })
+            .WithName("AddGExListMeasure")
+            .WithOpenApi()
+            .Produces<Response<string>>(StatusCodes.Status201Created)
+            .Produces<ErrorResponse>(StatusCodes.Status400BadRequest);
+
             // GET: /api/v1/gold-expert-measures
             app.MapGet("/api/v1/gold-expert-measures", async (IGoldExpertService service) =>
             {
@@ -67,13 +102,6 @@ namespace TrackingFolder.API.Endpoints
             .Produces<ErrorResponse>(StatusCodes.Status404NotFound);
 
             return app;
-        }
-
-        private static async Task<Response<IEnumerable<GExMeasureResponse>>> HandleAsync(IGoldExpertService service)
-        {
-            var result = await service.GetGExpertMeasuresAsync();
-
-            return result;
         }
     }
 }

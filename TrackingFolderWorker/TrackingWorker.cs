@@ -1,8 +1,10 @@
 ﻿using ConsoleTables;
+using System.Collections.Generic;
 using System.Net.Http.Json;
 using System.Text.Json;
 using TrackingFolderWorker.Logs;
 using TrackingFolderWorker.Models;
+using TrackingFolderWorker.Requests;
 using TrackingFolderWorker.Services;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
@@ -16,8 +18,9 @@ namespace TrackingFolderWorker
         private readonly IConfiguration _configuration;
         private readonly string? _folderPath;
         private readonly string? _hostAPIurl;
-        private readonly string? _goldExId;
-        private readonly List<string>? _targetHeaders;
+        //private readonly string? _goldExId;
+        private readonly string? _goldExSerial;
+        private List<string>? _targetHeaders = [];
         private readonly int? _getrows;
 
         public IEnumerable<FileDetail> FileLists { get; private set; }
@@ -28,7 +31,8 @@ namespace TrackingFolderWorker
         {
             _configuration = configuration;
 
-            _goldExId = _configuration["GoldExpertID"];
+            //_goldExId = _configuration["GoldExpertID"];
+            _goldExSerial = _configuration["GoldExpertSerial"];
             _hostAPIurl = _configuration["Host_API"];
             _logger = logger;
             _httpClient = httpClientFactory.CreateClient();
@@ -38,10 +42,10 @@ namespace TrackingFolderWorker
 
             // Get tracking folder path from configuration or environment variable
             _folderPath = _configuration["TrackingFolderPath"];
-            _targetHeaders = _configuration["Headers"]?.Split(',').Select(h => h.Trim()).ToList();
+
             _getrows = int.TryParse(_configuration["GetRow"]?.ToString(), out int r) ? r : null;
 
-            _logger.LogInformation("Remote API host: " + _httpClient.BaseAddress + $"/{_goldExId}");
+            _logger.LogInformation("Remote API host: " + _httpClient.BaseAddress + $"/{_goldExSerial}");
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -124,6 +128,18 @@ namespace TrackingFolderWorker
                 if (!isAlreadyExist)
                 {
                     //string json = JsonSerializer.Serialize(fileDetail);
+                    string url = _httpClient.BaseAddress + $"/{_goldExSerial}";
+                    // Get list of headers 
+                    var result = await _httpClient.GetFromJsonAsync<IEnumerable<CsvColumnHeaderResponse>>($"{url}/headers");
+
+                    if (result != null)
+                    {
+                        _targetHeaders = result.Select(h => h.HeaderName).Distinct().ToList();
+                    }
+                    else
+                    {
+                        _targetHeaders = _configuration["Headers"]?.Split(',').Select(h => h.Trim()).ToList();
+                    }
 
                     // Extract data from file 
                     var (Headers, Data) = CsvReaderService.CsvReader.ReadCsvFileDynamic(fileDetail.FullPath, _targetHeaders);
@@ -136,7 +152,7 @@ namespace TrackingFolderWorker
                     //_logger.LogInformation("Sending data: " + jsonData);
 
                     // Send data to API
-                    var response = await _httpClient.PostAsJsonAsync($"/{_goldExId}", Data);
+                    var response = await _httpClient.PostAsJsonAsync(url, Data);
 
                     if (!response.IsSuccessStatusCode)
                     {

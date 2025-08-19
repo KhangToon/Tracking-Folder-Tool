@@ -16,7 +16,7 @@ var url = $"http://{localIP}:{port}";
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.WebHost.UseUrls(url);
+//builder.WebHost.UseUrls(url);
 
 // Register application services and dependencies
 builder.AddApplicationServices();
@@ -52,20 +52,20 @@ var app = builder.Build();
 // Enable Swagger UI in development
 if (app.Environment.IsDevelopment())
 {
-    //app.UseSwagger();
-    //app.UseSwaggerUI();
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseDeveloperExceptionPage();
-}
-else
-{
-    app.UseExceptionHandler("/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
-    app.UseHsts();
-}
+//if (app.Environment.IsDevelopment())
+//{
+//    app.UseDeveloperExceptionPage();
+//}
+//else
+//{
+//    app.UseExceptionHandler("/Error");
+//    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
+//    app.UseHsts();
+//}
 
 // Map API endpoints under /api/v1
 //app.MapGroup("/api/v1")
@@ -74,23 +74,23 @@ else
 
 app.MapGoldExpertEndpoints();
 
-// In-memory data store
-var dataStore = new List<Dictionary<string, string>>();
+//// In-memory data store
+//var dataStore = new List<Dictionary<string, string>>();
 
-// POST endpoint
-app.MapPost("/GEX8998", (List<Dictionary<string, string>> data) =>
-{
-    if (data == null || data.Count == 0)
-    {
-        return Results.BadRequest("Data is required.");
-    }
+//// POST endpoint
+//app.MapPost("/default", (List<Dictionary<string, string>> data) =>
+//{
+//    if (data == null || data.Count == 0)
+//    {
+//        return Results.BadRequest("Data is required.");
+//    }
 
-    dataStore.AddRange(data);
-    return Results.Created("/GEX8998", data);
-});
+//    dataStore.AddRange(data);
+//    return Results.Created("/default", data);
+//});
 
-// GET endpoint
-app.MapGet("/GEX8998", () => Results.Ok(dataStore));
+//// GET endpoint
+//app.MapGet("/default", () => Results.Ok(dataStore));
 
 app.UseHttpsRedirection();
 app.UseExceptionHandler();

@@ -19,6 +19,29 @@ namespace TrackingFolder.API.Services
         private readonly ILogger<GoldExpertMeasureService> _logger = logger ?? throw new ArgumentNullException(nameof(logger)); // Logger for logging information and errors
         private readonly IMapper _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
 
+        public async Task<Response<string>> AddGExListMeasureAsync(List<Dictionary<string, string>> data)
+        {
+            try
+            {
+                return new Response<string>
+                {
+                    Message = "Gold expert measure result added successfully.",
+                    Data = null,
+                    Success = true
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error adding gold expert measure result: {ex.Message}");
+                return new Response<string>
+                {
+                    Message = "Error adding gold expert measure result.",
+                    Data = null,
+                    Success = false
+                };
+            }
+        }
+
         public async Task<Response<string>> AddGExpertMeasureAsync(CreateGoldExpertMeasureResult createGExMeasureRequest)
         {
             try
@@ -98,6 +121,32 @@ namespace TrackingFolder.API.Services
                 {
                     Message = "Error deleting measure.",
                     Data = false,
+                    Success = false
+                };
+            }
+        }
+
+        public async Task<Response<IEnumerable<CsvColumnHeaderResponse>>> GetCsvColumnHeaders(GetGExColumnHeadersRequest request)
+        {
+            try
+            {
+                var measures = await _context.CsvColumnHeaders.Where(m => m.GExSerial == request.GExSerial).ToListAsync();
+                var response = _mapper.Map<IEnumerable<CsvColumnHeaderResponse>>(measures);
+                _logger.LogInformation($"Retrieved {measures.Count} measures successfully.");
+                return new Response<IEnumerable<CsvColumnHeaderResponse>>
+                {
+                    Message = "Measures retrieved successfully.",
+                    Data = response,
+                    Success = true
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error retrieving measures: {ex.Message}");
+                return new Response<IEnumerable<CsvColumnHeaderResponse>>
+                {
+                    Message = "Error retrieving measures.",
+                    Data = null,
                     Success = false
                 };
             }
