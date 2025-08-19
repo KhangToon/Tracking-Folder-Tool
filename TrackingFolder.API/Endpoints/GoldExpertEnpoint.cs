@@ -15,7 +15,7 @@ namespace TrackingFolder.API.Endpoints
         /// <param name="app">The endpoint route builder to map the endpoints to.</param>
         /// <returns>The updated <see cref="IEndpointRouteBuilder"/>.</returns>
         public static IEndpointRouteBuilder MapGoldExpertEndpoints(this IEndpointRouteBuilder app)
-        {
+        {   
             // GET: /api/v1/gold-expert-measures
             app.MapGet("/api/v1/gold-expert-measures", async (IGoldExpertService service) =>
             {

@@ -11,6 +11,7 @@ namespace TrackingFolder.API.AppContext
         // DbSet to represent the collection
         public DbSet<GoldExpertMachine> GoldExpertMachines { get; set; }
         public DbSet<GExMeasureResult> GExMeasureResults { get; set; }
+        public DbSet<CsvColumnHeader> CsvColumnHeaders { get; set; }
 
         // Constructor to configure the database context
         protected override void OnModelCreating(ModelBuilder modelBuilder)
